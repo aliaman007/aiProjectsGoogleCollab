@@ -1,0 +1,80 @@
+# prompt: use the below code and send the results through an email , make sure to sure to startttls for mail security
+
+from collections import Counter
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+
+def analyze_file_content(file_path):
+  """
+  Reads a file, counts the frequency of letters, and displays the percentage sorted.
+  """
+  try:
+    with open(file_path, 'r') as file:
+      text = file.read()
+  except FileNotFoundError:
+    print(f"File not found: {file_path}")
+    return
+
+  # Remove non-alphabetic characters and convert to lowercase
+  text = ''.join(c for c in text if c.isalpha()).lower()
+
+  # Count the frequency of each letter
+  letter_counts = Counter(text)
+
+  # Calculate the percentage of each letter
+  total_letters = sum(letter_counts.values())
+  letter_percentages = {letter: (count / total_letters) * 100 for letter, count in letter_counts.items()}
+
+  # Sort the letter percentages in descending order
+  sorted_percentages = dict(sorted(letter_percentages.items(), key=lambda item: item[1], reverse=True))
+
+  # Store the results in a file
+  output_file_path = 'letter_frequency_analysis.txt'
+  with open(output_file_path, 'w') as output_file:
+    for letter, percentage in sorted_percentages.items():
+      output_file.write(f"{letter}: {percentage:.2f}%\n")
+
+  return output_file_path
+
+
+def send_email(sender_email, sender_password, receiver_email, subject, body, attachment_path):
+  """
+  Sends an email with an attachment.
+  """
+  msg = MIMEMultipart()
+  msg['From'] = sender_email
+  msg['To'] = receiver_email
+  msg['Subject'] = subject
+
+  msg.attach(MIMEText(body, 'plain'))
+
+  with open(attachment_path, "r") as attachment: # Changed from 'rb' to 'r' to read the file in text mode
+    part = MIMEText(attachment.read(), "plain")
+    part.add_header('Content-Disposition', 'attachment', filename=attachment_path)
+    msg.attach(part)
+
+  try:
+    server = smtplib.SMTP('smtp.gmail.com', 587)  # Use port 587 for STARTTLS
+    server.starttls()  # Enable STARTTLS for security
+    server.login(sender_email, sender_password)
+    server.sendmail(sender_email, receiver_email, msg.as_string())
+    server.quit()
+    print("Email sent successfully!")
+  except Exception as e:
+    print(f"Error sending email: {e}")
+
+# Example usage:
+file_path = '/content/Big_Data_GM_Session.txt'  # Replace with your file path
+output_file_path = analyze_file_content(file_path)
+
+# Email configuration
+sender_email = "emailforcodetest@gmail.com"  # Replace with your email
+sender_password = "3dyGdRux5n4rkpqH1zMU"  # Replace with your password
+receiver_email = "eemazaidi@gmail.com"  # Replace with recipient's email
+subject = "Letter Frequency Analysis Results"
+body = "Please find the attached file with the letter frequency analysis results."
+
+if output_file_path:
+  send_email(sender_email, sender_password, receiver_email, subject, body, output_file_path)
